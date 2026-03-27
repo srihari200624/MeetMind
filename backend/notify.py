@@ -1,10 +1,14 @@
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 
-# Gmail SMTP config
-GMAIL_ADDRESS = "meetmind.test@gmail.com"
-GMAIL_APP_PASSWORD = "cnir wzrl uybx xfqs"
+load_dotenv()
+
+# Gmail SMTP config — loaded from .env
+GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS", "")
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
 

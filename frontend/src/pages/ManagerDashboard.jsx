@@ -129,10 +129,10 @@ export default function ManagerDashboard({ user, onLogout, darkMode, toggleDark 
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
                 {[
-                  { label: "Meetings", value: "42", sub: "processed" },
-                  { label: "Total Tasks", value: "156", sub: "extracted" },
+                  { label: "Meetings", value: meetings.length, sub: "processed" },
+                  { label: "Total Tasks", value: meetings.reduce((a, m) => a + (m.action_items?.length || 0), 0), sub: "extracted" },
                   { label: "Pending Review", value: submissions.length, sub: "submissions", color: "var(--blue)" },
-                  { label: "Team Avg Score", value: "75", sub: "accountability" },
+                  { label: "Team Avg Score", value: team.length ? Math.round(team.reduce((a, e) => a + (e.avg_score || 0), 0) / team.length) : 0, sub: "accountability" },
                 ].map((s, i) => (
                   <div key={i} className="stat-card">
                     <div className="stat-label">{s.label}</div>
@@ -164,7 +164,7 @@ export default function ManagerDashboard({ user, onLogout, darkMode, toggleDark 
                               <span>📄</span>
                               <span style={{ fontSize: 13, fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.file_name}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: s.validationFlag ? "var(--amber)" : "var(--green)", whiteSpace: "nowrap" }}>
-                                {s.validationFlag ? `⚠️ ${s.validation_flag ? `⚠️ ${s.validation_note}` : "✅ Looks relevant"}% match` : `✅ ${s.validation_flag ? `⚠️ ${s.validation_note}` : "✅ Looks relevant"}% match`}
+                                {s.validation_flag ? `⚠️ ${s.validation_note || "Relevance mismatch"}` : "✅ Looks relevant"}
                               </span>
                             </div>
                             {/* To wire: pass submission id + rejection_reason to api.reviewSubmission() */}
