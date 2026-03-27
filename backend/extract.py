@@ -190,15 +190,15 @@ Transcript:
     return enriched
 
 
-def save_meeting_and_items(title: str, summary: str, transcript: str, action_items: list, created_by: int) -> int:
+def save_meeting_and_items(title: str, summary: str, transcript: str, action_items: list, manager_id: int, speaker_count: int = 0, speakers: str = "[]") -> int:
     """Save meeting and action items to SQLite. Returns meeting ID."""
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO meetings (title, summary, transcript, created_by)
-        VALUES (?, ?, ?, ?)
-    """, (title, summary, transcript, created_by))
+        INSERT INTO meetings (title, summary, transcript, manager_id, speaker_count, speakers)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (title, summary, transcript, manager_id, speaker_count, speakers))
     meeting_id = cursor.lastrowid
 
     for item in action_items:

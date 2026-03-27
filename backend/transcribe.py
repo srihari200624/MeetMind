@@ -6,6 +6,7 @@ import torch
 import soundfile as sf
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
+from dotenv import load_dotenv
 
 # ── Load models once at startup ───────────────────────────────────────────────
 print("Loading Faster-Whisper model...")
@@ -13,9 +14,10 @@ whisper_model = WhisperModel("base", device="cuda", compute_type="float16")
 print("Faster-Whisper ready.")
 
 print("Loading pyannote speaker diarisation pipeline...")
+load_dotenv()
 diarisation_pipeline = Pipeline.from_pretrained(
     "pyannote/speaker-diarization-3.1",
-    token="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"
+    token=os.environ["HF_TOKEN"]
 )
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 diarisation_pipeline.to(device)

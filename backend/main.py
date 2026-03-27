@@ -75,7 +75,13 @@ async def upload_meeting(
     transcript = transcription["transcript"]
     action_items = extract_action_items(transcript)
     summary = generate_summary(transcript)
-    meeting_id = save_meeting_and_items(title, summary, transcript, action_items, manager_id)
+
+    speakers = list(set(s["speaker"] for s in transcription.get("speaker_segments", [])))
+    meeting_id = save_meeting_and_items(
+        title, summary, transcript, action_items, manager_id,
+        speaker_count=transcription.get("speaker_count", len(speakers)),
+        speakers=json.dumps(speakers)
+    )
 
     for item in action_items:
         if item.get("owner_email") and not item.get("needs_review"):
@@ -313,7 +319,7 @@ def get_pending_submissions():
         FROM submissions s
         JOIN action_items ai ON s.action_item_id = ai.id
         JOIN users u ON s.employee_id = u.id
-        WHERE s.status = 'pending_review'
+        WHERE s.reviewed_at IS NULL
         ORDER BY s.submitted_at DESC
     """)
     submissions = [dict(s) for s in cursor.fetchall()]
@@ -340,9 +346,9 @@ def review_submission(req: ApproveRequest):
         raise HTTPException(status_code=404, detail="Submission not found.")
 
     cursor.execute(
-        "UPDATE submissions SET status = ?, reviewed_at = ? WHERE id = ?",
-        (req.action, datetime.now().isoformat(), req.submission_id)
-    )
+    "UPDATE submissions SET reviewed_at = ? WHERE id = ?",
+    (datetime.now().isoformat(), req.submission_id)
+)
 
     if req.action == "approved":
         new_score = min(100, submission["accountability_score"] + 10)
@@ -352,9 +358,9 @@ def review_submission(req: ApproveRequest):
         )
     else:
         cursor.execute(
-            "UPDATE action_items SET status = 'pending' WHERE id = ?",
-            (submission["task_id"],)
-        )
+    "UPDATE action_items SET status = 'rejected' WHERE id = ?",
+    (submission["task_id"],)
+)
         # Log correction signal for adaptive prompt
         if req.rejection_reason:
             cursor.execute("""
@@ -410,8 +416,9 @@ def get_leaderboard():
         GROUP BY u.id
         ORDER BY avg_score DESC
     """)
+    rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
-    return [dict(r) for r in cursor.fetchall()]
+    return rows
 
 
 @app.get("/escalation-summary")
@@ -472,42 +479,6 @@ def approve_flagged_task(task_id: int):
 def test_escalation():
     run_escalation()
     return {"success": True, "message": "Escalation check triggered manually."}
-
-
-
-@app.get("/tasks")
-def get_tasks():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT 
-            id,
-            task,
-            status,
-            priority,
-            deadline,
-            50 as score,
-            60 as confidence
-        FROM tasks
-    """)
-
-    rows = cursor.fetchall()
-
-    tasks = []
-    for r in rows:
-        tasks.append({
-            "id": r[0],
-            "task": r[1],
-            "status": r[2],
-            "priority": r[3],
-            "deadline": r[4],
-            "score": r[5],
-            "confidence": r[6],
-        })
-
-    conn.close()
-    return tasks
 
 
 @app.get("/")

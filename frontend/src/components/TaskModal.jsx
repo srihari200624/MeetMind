@@ -28,11 +28,22 @@ export default function TaskModal({ task, onClose }) {
     setValidating(false);
   };
 
-  const handleSubmit = async () => {
-    setSubmitted(true);
-    await new Promise(r => setTimeout(r, 600));
-    onClose();
-  };
+ const handleSubmit = async () => {
+  if (submitted) return; // prevent double submit
+  setSubmitted(true);
+  const fd = new FormData();
+  fd.append("action_item_id", task.id);
+  fd.append("employee_id", task.owner_id);
+  fd.append("file", file);
+  try {
+    await fetch("http://127.0.0.1:8000/submit-task", {
+      method: "POST", body: fd
+    });
+  } catch (err) {
+    console.error(err);
+  }
+  onClose();
+};
 
   return (
     <div className="modal-overlay" onClick={e => e.target===e.currentTarget && onClose()}>

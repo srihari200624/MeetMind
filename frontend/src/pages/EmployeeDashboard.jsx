@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, ScoreRing, ConfBar } from "../components/UI";
 import TaskModal from "../components/TaskModal";
-import { MOCK_TASKS } from "../data/mockData";
 
 // To wire to real API (Step E):
 //   import api from '../api/client';
@@ -10,13 +9,30 @@ import { MOCK_TASKS } from "../data/mockData";
 //     useEffect(() => { api.getMyTasks(user.id).then(r => setTasks(r.data)); }, []);
 
 export default function EmployeeDashboard({ user, onLogout, darkMode, toggleDark }) {
-  const [tasks] = useState(MOCK_TASKS);
+  const [tasks, setTasks] = useState([]);
+useEffect(() => {
+  fetch(`http://127.0.0.1:8000/my-tasks/${user.id}`)
+    .then(r => r.json())
+    .then(data => setTasks(Array.isArray(data) ? data : []))
+    .catch(() => setTasks([]));
+}, [user.id]);
+const refreshTasks = () => {
+  fetch(`http://127.0.0.1:8000/my-tasks/${user.id}`)
+    .then(r => r.json())
+    .then(data => setTasks(Array.isArray(data) ? data : []));
+};
+  const [scoreData, setScoreData] = useState(null);
+  useEffect(() => {
+    fetch(`http://127.0.0.1:8000/score/${user.id}`)
+      .then(r => r.json())
+      .then(data => setScoreData(data));
+  }, [user.id]);
   const [filter, setFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState(null);
   const [tab, setTab] = useState("tasks");
 
   const filtered = filter==="all" ? tasks : tasks.filter(t=>t.status===filter);
-  const totalScore = Math.round(tasks.reduce((a,t)=>a+t.score,0)/tasks.length);
+  const totalScore = Math.round(scoreData?.stats?.avg_score || 0);
   const completed = tasks.filter(t=>t.status==="approved").length;
   const pending   = tasks.filter(t=>t.status==="pending"||t.status==="rejected").length;
 
@@ -191,7 +207,6 @@ export default function EmployeeDashboard({ user, onLogout, darkMode, toggleDark
         )}
       </div>
 
-      {selectedTask && <TaskModal task={selectedTask} onClose={()=>setSelectedTask(null)} />}
-    </div>
+{selectedTask && <TaskModal task={selectedTask} onClose={()=>{ setSelectedTask(null); refreshTasks(); }} />}    </div>
   );
 }

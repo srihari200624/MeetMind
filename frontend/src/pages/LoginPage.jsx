@@ -12,21 +12,23 @@ export default function LoginPage({ onLogin }) {
   const [loading, setLoading] = useState(false);
 
   const handle = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 700));
-
-    // ── MOCK LOGIN — replace with api.login() call ──
-    if      (id==="MGR001"&&pass==="manager123") onLogin({ id:5, employee_id:"MGR001", name:"Hari",         role:"manager"  });
-    else if (id==="EMP001"&&pass==="emp001pass") onLogin({ id:6, employee_id:"EMP001", name:"Reno Red",     role:"employee" });
-    else if (id==="EMP002"&&pass==="emp002pass") onLogin({ id:7, employee_id:"EMP002", name:"Mukil Dharan", role:"employee" });
-    else if (id==="EMP003"&&pass==="emp003pass") onLogin({ id:8, employee_id:"EMP003", name:"Bala Ashwath", role:"employee" });
-    else setError("Invalid Employee ID or password.");
-    // ────────────────────────────────────────────────
-
-    setLoading(false);
-  };
+  e.preventDefault();
+  setError("");
+  setLoading(true);
+  try {
+    const res = await fetch("http://127.0.0.1:8000/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employee_id: id, password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Login failed");
+    onLogin(data.user);
+  } catch (err) {
+    setError(err.message);
+  }
+  setLoading(false);
+};
 
   return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:24, background:"var(--bg)" }}>

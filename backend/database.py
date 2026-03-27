@@ -48,28 +48,29 @@ def init_db():
             audio_filename  TEXT,
             transcript      TEXT,
             summary         TEXT,
+            speaker_count   INTEGER DEFAULT 0,
+            speakers        TEXT,   -- JSON array of speaker labels
             manager_id      INTEGER NOT NULL REFERENCES users(id),
             created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
-    # ── Tasks (action items extracted from meetings) ──────────────────────────
+    # ── Action Items (tasks extracted from meetings) ──────────────────────────
     c.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
+        CREATE TABLE IF NOT EXISTS action_items (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             meeting_id      INTEGER NOT NULL REFERENCES meetings(id),
-            task_description TEXT   NOT NULL,
+            task            TEXT    NOT NULL,
+            owner           TEXT,
             owner_id        INTEGER REFERENCES users(id),
-            owner_name      TEXT,               -- raw name from LLM, before matching
+            owner_email     TEXT,
             deadline        DATE,
             priority        TEXT    DEFAULT 'medium' CHECK(priority IN ('high','medium','low')),
-            confidence INTEGER DEFAULT 50,
-            needs_review INTEGER DEFAULT 0,
+            confidence      INTEGER DEFAULT 50,
+            accountability_score INTEGER DEFAULT 50,
+            needs_review    INTEGER DEFAULT 0,
             status          TEXT    DEFAULT 'pending'
                                     CHECK(status IN ('pending','submitted','approved','rejected')),
-            confidence_score INTEGER DEFAULT 100, -- 0-100, Qwen self-check
-            low_confidence  INTEGER DEFAULT 0,    -- 1 = held in queue for manager review
-            escalation_level INTEGER DEFAULT 0,   -- 0=none, 1=L1, 2=L2, 3=L3
             created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -79,16 +80,17 @@ def init_db():
     c.execute("""
         CREATE TABLE IF NOT EXISTS submissions (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            task_id         INTEGER NOT NULL REFERENCES tasks(id),
+            action_item_id  INTEGER NOT NULL REFERENCES action_items(id),
             employee_id     INTEGER NOT NULL REFERENCES users(id),
-            filename        TEXT    NOT NULL,
-            filepath        TEXT    NOT NULL,
-            filetype        TEXT,
-            validation_score INTEGER,           -- 0-100, Qwen context check
-            validation_flag  INTEGER DEFAULT 0, -- 1 = mismatch warning
-            validation_note  TEXT,
-            manager_note    TEXT,               -- rejection reason from manager
-            submitted_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            file_path       TEXT    NOT NULL,
+            file_name       TEXT    NOT NULL,
+            file_type       TEXT,
+            status          TEXT    DEFAULT 'pending_review',
+            validation_flag INTEGER DEFAULT 0,
+            validation_note TEXT,
+            manager_note    TEXT,
+            submitted_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            reviewed_at     TIMESTAMP
         )
     """)
 
@@ -96,13 +98,10 @@ def init_db():
     c.execute("""
         CREATE TABLE IF NOT EXISTS correction_signals (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            task_id         INTEGER REFERENCES tasks(id),
-            meeting_id      INTEGER REFERENCES meetings(id),
-            signal_type     TEXT    NOT NULL
-                                    CHECK(signal_type IN ('rejection','edit','low_confidence')),
-            original_text   TEXT,   -- what LLM extracted
-            corrected_text  TEXT,   -- what manager changed it to (NULL for rejection)
+            task_id         INTEGER REFERENCES action_items(id),
+            employee_id     INTEGER REFERENCES users(id),
             rejection_reason TEXT,
+            original_task   TEXT,
             created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -111,7 +110,7 @@ def init_db():
     c.execute("""
         CREATE TABLE IF NOT EXISTS escalation_log (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            task_id         INTEGER NOT NULL REFERENCES tasks(id),
+            task_id         INTEGER NOT NULL REFERENCES action_items(id),
             employee_id     INTEGER NOT NULL REFERENCES users(id),
             level           TEXT    NOT NULL CHECK(level IN ('L1','L2','L3')),
             fired_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -141,11 +140,20 @@ def init_db():
     """)
 
     # ── Indexes for common queries ────────────────────────────────────────────
-    c.execute("CREATE INDEX IF NOT EXISTS idx_tasks_owner   ON tasks(owner_id)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_tasks_meeting ON tasks(meeting_id)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status  ON tasks(status)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_subs_task     ON submissions(task_id)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_signals_meeting ON correction_signals(meeting_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ai_owner   ON action_items(owner_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ai_meeting ON action_items(meeting_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ai_status  ON action_items(status)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_subs_task  ON submissions(action_item_id)")
+
+    # ── Migrations (safe for existing databases) ──────────────────────────────
+    for col, definition in [
+        ("speaker_count", "INTEGER DEFAULT 0"),
+        ("speakers",      "TEXT"),
+    ]:
+        try:
+            c.execute(f"ALTER TABLE meetings ADD COLUMN {col} {definition}")
+        except Exception:
+            pass  # column already exists
 
     conn.commit()
     conn.close()

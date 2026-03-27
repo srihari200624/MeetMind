@@ -1,10 +1,5 @@
-import hashlib
 import sqlite3
-from database import get_connection
-
-
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+from database import get_connection, hash_password
 
 
 def create_user(employee_id: str, password: str, name: str, email: str, role: str = "employee"):
@@ -12,7 +7,7 @@ def create_user(employee_id: str, password: str, name: str, email: str, role: st
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO users (employee_id, password, name, email, role)
+            INSERT INTO users (employee_id, password_hash, name, email, role)
             VALUES (?, ?, ?, ?, ?)
         """, (employee_id, hash_password(password), name, email, role))
         conn.commit()
@@ -29,19 +24,13 @@ def login(employee_id: str, password: str):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT * FROM users WHERE employee_id = ? AND password = ?
+        SELECT id, employee_id, name, email, role
+        FROM users
+        WHERE employee_id = ? AND password_hash = ?
     """, (employee_id, hash_password(password)))
     user = cursor.fetchone()
     conn.close()
-    if user:
-        return {
-            "id": user["id"],
-            "employee_id": user["employee_id"],
-            "name": user["name"],
-            "email": user["email"],
-            "role": user["role"]
-        }
-    return None
+    return dict(user) if user else None
 
 
 def get_user_by_id(user_id: int):
