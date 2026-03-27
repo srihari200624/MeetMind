@@ -1,0 +1,2 @@
+# MeetMind
+MEETING ASSISTANT TOOL
