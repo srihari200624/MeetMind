@@ -157,14 +157,14 @@ export default function ManagerDashboard({ user, onLogout, darkMode, toggleDark 
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                               <span style={{ fontWeight: 600, fontSize: 14 }}>{s.employee_name}</span>
-                              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{s.submitted_at}</span>
+                              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{new Date(s.submitted_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
                             </div>
                             <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 10 }}>{s.task}</p>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "var(--bg-secondary)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", marginBottom: 12 }}>
                               <span>📄</span>
                               <span style={{ fontSize: 13, fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.file_name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: s.validationFlag ? "var(--amber)" : "var(--green)", whiteSpace: "nowrap" }}>
-                                {s.validation_flag ? `⚠️ ${s.validation_note || "Relevance mismatch"}` : "✅ Looks relevant"}
+                              <span style={{ fontSize: 11, fontWeight: 600, color: s.validation_flag ? "var(--amber)" : "var(--green)", whiteSpace: "nowrap" }}>
+                                {s.validation_flag ? `⚠️ ${s.validation_note}` : "✅ Looks relevant"}
                               </span>
                             </div>
                             {/* To wire: pass submission id + rejection_reason to api.reviewSubmission() */}
@@ -252,7 +252,7 @@ export default function ManagerDashboard({ user, onLogout, darkMode, toggleDark 
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                       <div>
                         <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{m.title}</h3>
-                        <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{m.created_at}</p>
+                        <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{new Date(m.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
                         <span className="tag">{m.action_items?.length ?? 0} tasks</span>

@@ -1,3 +1,4 @@
+import os
 import json
 from openai import OpenAI
 from database import get_connection
@@ -7,6 +8,15 @@ client = OpenAI(base_url="http://127.0.0.1:1234/v1", api_key="lm-studio")
 MODEL = "qwen/qwen2.5-vl-7b"
 
 CONFIDENCE_THRESHOLD = 70
+PROMPT_FILE = os.path.join(os.path.dirname(__file__), "extraction_prompt.txt")
+
+
+def load_extraction_prompt() -> str | None:
+    """Load refined prompt from file if it exists."""
+    if os.path.exists(PROMPT_FILE):
+        with open(PROMPT_FILE, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    return None
 
 
 def get_all_users() -> list:
@@ -118,7 +128,12 @@ def extract_action_items(transcript: str) -> list:
     corrections = get_recent_corrections()
     correction_context = build_correction_context(corrections)
 
-    prompt = f"""You are an AI meeting assistant. Read the following meeting transcript carefully and extract all action items.
+    refined_prompt = load_extraction_prompt()
+    prompt = refined_prompt.format(
+        user_names=user_names,
+        correction_context=f"\n{correction_context}" if correction_context else "",
+        transcript=transcript
+    ) if refined_prompt else f"""You are an AI meeting assistant. Read the following meeting transcript carefully and extract all action items.
 
 Known team members: {user_names}
 
@@ -143,7 +158,7 @@ Example format:
 {correction_context}
 ''' if correction_context else ""}
 Transcript:
-{transcript}"""
+{transcript}"""  # noqa - end of fallback prompt
 
     response = client.chat.completions.create(
         model=MODEL,

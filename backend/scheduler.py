@@ -1,7 +1,14 @@
+import os
+import json
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, date
 from database import get_connection
 from notify import notify_escalation, send_email
+from openai import OpenAI
+
+lm_client = OpenAI(base_url="http://127.0.0.1:1234/v1", api_key="lm-studio")
+MODEL = "qwen/qwen2.5-vl-7b"
+PROMPT_FILE = os.path.join(os.path.dirname(__file__), "extraction_prompt.txt")
 
 scheduler = BackgroundScheduler()
 
@@ -128,11 +135,78 @@ This is an automated message from MeetMind AI.
     print(f"[Scheduler] Escalation check complete. Processed {len(overdue_items)} overdue tasks.")
 
 
+def run_prompt_refinement():
+    """Read correction signals, ask Qwen to rewrite the extraction prompt, save to file."""
+    print(f"[Scheduler] Running weekly prompt refinement at {datetime.now()}")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT original_task, rejection_reason
+        FROM correction_signals
+        ORDER BY created_at DESC
+        LIMIT 20
+    """)
+    corrections = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    if not corrections:
+        print("[Scheduler] No corrections found - skipping prompt refinement.")
+        return
+
+    examples = "\n".join([
+        f"  - Task: \"{c['original_task']}\" - Rejected because: {c['rejection_reason']}"
+        for c in corrections if c.get("rejection_reason")
+    ])
+
+    meta_prompt = f"""You are an AI prompt engineer. Below is the current extraction prompt used to extract action items from meeting transcripts, followed by a list of recent mistakes.
+
+Rewrite the extraction prompt to avoid these mistakes. Keep the same JSON output format. Use {{user_names}}, {{correction_context}}, and {{transcript}} as placeholders.
+
+Current prompt:
+---
+You are an AI meeting assistant. Read the following meeting transcript carefully and extract all action items.
+
+Known team members: {{user_names}}
+
+For each action item, extract:
+- task: clear description of what needs to be done
+- owner: name of the person responsible (must be one of the known team members)
+- deadline: deadline if mentioned, otherwise null
+- priority: "high", "medium", or "low" based on urgency and importance
+
+Return ONLY a valid JSON array. No explanation, no markdown, no extra text.
+{{correction_context}}
+Transcript:
+{{transcript}}
+---
+
+Recent mistakes to fix:
+{examples}
+
+Return ONLY the rewritten prompt. No explanation."""
+
+    try:
+        response = lm_client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": meta_prompt}],
+            max_tokens=800,
+            temperature=0.3
+        )
+        new_prompt = response.choices[0].message.content.strip()
+        with open(PROMPT_FILE, "w", encoding="utf-8") as f:
+            f.write(new_prompt)
+        print(f"[Scheduler] Prompt refined and saved to {PROMPT_FILE}")
+    except Exception as e:
+        print(f"[Scheduler] Prompt refinement failed: {e}")
+
+
 def start_scheduler():
     """Start the background scheduler."""
     scheduler.add_job(run_escalation, "interval", hours=1, id="escalation_job")
+    scheduler.add_job(run_prompt_refinement, "interval", weeks=1, id="refinement_job")
     scheduler.start()
-    print("[Scheduler] Started — escalation runs every hour.")
+    print("[Scheduler] Started — escalation runs every hour, prompt refinement runs weekly.")
 
 
 def stop_scheduler():

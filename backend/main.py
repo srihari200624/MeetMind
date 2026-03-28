@@ -13,7 +13,7 @@ from transcribe import transcribe_audio
 from extract import extract_action_items, save_meeting_and_items, generate_summary
 from notify import notify_task_assigned, notify_task_submitted, notify_task_approved, notify_task_rejected
 from scheduler import start_scheduler, run_escalation
-
+from watcher import start_watcher
 
 # ── App setup ────────────────────────────────────────────────────────────────
 app = FastAPI(title="MeetMind AI", version="2.0")
@@ -37,8 +37,8 @@ MODEL = "qwen/qwen2.5-vl-7b"
 def startup():
     init_db()
     start_scheduler()
+    start_watcher()
     print("MeetMind AI v2.0 started.")
-
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
 class LoginRequest(BaseModel):

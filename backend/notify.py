@@ -1,33 +1,25 @@
-import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from dotenv import load_dotenv
 
-load_dotenv()
-
-# Gmail SMTP config — loaded from .env
-GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS", "")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
+# MailHog SMTP config
+SMTP_HOST = "localhost"
+SMTP_PORT = 1025
+SENDER_ADDRESS = "meetmind@localhost"
 
 
 def send_email(to_email: str, subject: str, body: str) -> bool:
-    """Send a plain text email via Gmail SMTP."""
+    """Send a plain text email via MailHog (local)."""
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = f"MeetMind AI <{GMAIL_ADDRESS}>"
+        msg["From"] = f"MeetMind AI <{SENDER_ADDRESS}>"
         msg["To"] = to_email
 
         msg.attach(MIMEText(body, "plain"))
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_ADDRESS, to_email, msg.as_string())
+            server.sendmail(SENDER_ADDRESS, to_email, msg.as_string())
 
         print(f"Email sent to {to_email}: {subject}")
         return True
@@ -162,10 +154,10 @@ This is an automated message from MeetMind AI.
 if __name__ == "__main__":
     print("Testing task assignment email...")
     notify_task_assigned(
-        to_email="meetmind.test@gmail.com",
+        to_email="reno@localhost",
         employee_name="Reno Red",
         task="Finish the API integration",
         deadline="2026-03-28",
         priority="high"
     )
-    print("Done. Check meetmind.test@gmail.com inbox.")
+    print("Done. Check http://localhost:8025 to see the email.")
