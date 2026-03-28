@@ -481,6 +481,13 @@ def test_escalation():
     return {"success": True, "message": "Escalation check triggered manually."}
 
 
+@app.post("/test-refinement")
+def test_refinement():
+    from scheduler import run_prompt_refinement
+    run_prompt_refinement()
+    return {"success": True, "message": "Prompt refinement triggered manually."}
+
+
 @app.get("/")
 def health():
     return {"status": "MeetMind AI v2.0 running"}

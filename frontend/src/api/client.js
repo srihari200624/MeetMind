@@ -21,11 +21,11 @@ const api = {
   getMyTasks: (userId) =>
     http.get(`/my-tasks/${userId}`),
 
-  submitTask: (taskId, file, note) => {
+  submitTask: (actionItemId, employeeId, file) => {
     const fd = new FormData();
-    fd.append("task_id", taskId);
+    fd.append("action_item_id", actionItemId);
+    fd.append("employee_id", employeeId);
     fd.append("file", file);
-    if (note) fd.append("note", note);
     return http.post("/submit-task", fd);
   },
 
@@ -36,10 +36,10 @@ const api = {
   getPendingSubmissions: () =>
     http.get("/pending-submissions"),
 
-  reviewSubmission: (submissionId, approved, rejectionReason = "") =>
+  reviewSubmission: (submissionId, action, rejectionReason = "") =>
     http.post("/review-submission", {
       submission_id: submissionId,
-      approved,
+      action,
       rejection_reason: rejectionReason,
     }),
 
@@ -52,9 +52,20 @@ const api = {
   getLeaderboard: () =>
     http.get("/leaderboard"),
 
-  uploadMeeting: (file) => {
+  getMeetings: () =>
+    http.get("/meetings"),
+
+  getEmployeesStatus: () =>
+    http.get("/employees-status"),
+
+  getEscalationSummary: () =>
+    http.get("/escalation-summary"),
+
+  uploadMeeting: (file, title, managerId) => {
     const fd = new FormData();
     fd.append("file", file);
+    fd.append("title", title);
+    fd.append("manager_id", String(managerId));
     return http.post("/upload", fd);
   },
 };

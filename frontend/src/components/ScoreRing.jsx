@@ -1,22 +1,22 @@
-import React from "react";
-
-function ScoreRing({ score, size = 48 }) {
+export default function ScoreRing({ score, size = 52 }) {
   const r = (size - 6) / 2;
   const circ = 2 * Math.PI * r;
-  const fill = circ * (1 - score / 100);
+  const fill = (score / 100) * circ;
   const color = score >= 70 ? "var(--green)" : score >= 40 ? "var(--amber)" : "var(--red)";
+  const glow  = score >= 70 ? "var(--green-glow)" : score >= 40 ? "var(--amber-glow)" : "var(--red-glow)";
+
   return (
-    <svg width={size} height={size} style={{ flexShrink:0 }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth={4} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={4}
-        strokeDasharray={circ} strokeDashoffset={fill}
-        strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`} />
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central"
-        style={{ fontSize:size*0.26, fontWeight:700, fill:"var(--text-primary)", fontFamily:"var(--font-display)" }}>
-        {score}
-      </text>
-    </svg>
+    <div className="score-ring" style={{ width: size, height: size }}>
+      <svg width={size} height={size}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(128,128,160,0.18)" strokeWidth={3} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke={color} strokeWidth={3}
+          strokeDasharray={`${fill} ${circ}`} strokeLinecap="round"
+          style={{ filter: `drop-shadow(0 0 5px ${glow})` }}
+        />
+      </svg>
+      <span className="score-ring-text mono" style={{ fontSize: size * 0.22 }}>{score}</span>
+    </div>
   );
 }
-
-export default ScoreRing;
