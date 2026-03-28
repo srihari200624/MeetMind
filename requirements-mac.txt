@@ -1,6 +1,6 @@
-# MeetMind AI — Windows (CUDA GPU)
+# MeetMind AI — Mac (CPU / Apple Silicon)
 # Python 3.11+ required
-# Install: pip install -r requirements.txt
+# Install: pip install -r requirements-mac.txt
 
 # API & Web
 fastapi==0.135.2
@@ -15,8 +15,7 @@ openai==2.29.0
 # Speech & Audio
 faster-whisper==1.2.1
 pyannote.audio==4.0.4
-torch==2.11.0
-torchaudio==2.11.0
+# torch installed separately — see SETUP.md
 soundfile==0.13.1
 
 # Scheduling
